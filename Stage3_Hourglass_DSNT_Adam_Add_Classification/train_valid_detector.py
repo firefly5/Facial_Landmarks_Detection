@@ -16,7 +16,7 @@ import random
 import torchvision
 from data import get_train_valid_set
 from dsnt.model import build_mpii_pose_model
-from predict import predict
+
 from tensorboardX import SummaryWriter
 from log import Logger
 from dsnt.hyperparam_scheduler import make_1cycle
