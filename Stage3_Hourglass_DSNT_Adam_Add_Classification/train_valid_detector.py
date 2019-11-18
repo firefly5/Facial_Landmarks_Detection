@@ -315,7 +315,7 @@ def main_test():
                         help='save the current Model')
     parser.add_argument('--save-directory', type=str, default='trained_models',
                         help='learnt models are saving here')
-    parser.add_argument('--phase', type=str, default='test',  # train, predict, finetune, Test
+    parser.add_argument('--phase', type=str, default='train',  # train, predict, finetune, Test
                         help='training, predicting or finetuning')
     # DSNT model related part
     parser.add_argument('--base-model', type=str, default='hg', metavar='BM',
@@ -488,20 +488,25 @@ def main_test():
     elif args.phase == 'Predict' or args.phase == 'predict':
         print('===> Predict')
         # how to do predict?
-        model_para_path = 'trained_models/detector_epoch_99.pt'
+        model_para_path = 'trained_models/detector_epoch_0.pt'
         model.load_state_dict(torch.load(model_para_path))
 
         for test_batch_idx, batch in enumerate(test_loader):
             test_img = batch['image']
             gt_landmarks = batch['landmarks']
-            print("GT", gt_landmarks)
-            test_img = test_img.to(device)
-            test_landmarks = model(test_img)[0]
+            gt_conf = batch['confidence']
 
+            # print("GT", gt_landmarks)
+            test_img = test_img.to(device)
+            test_landmarks, test_conf = model(test_img)
+            test_landmarks = test_landmarks[0]
             test_landmarks = (test_landmarks + 63 / 64) * 64 * 64 / 63
-            print("Predict", test_landmarks)
+            # print("Predict", test_landmarks)
             test_landmarks = test_landmarks.view(-1, 42)
 
+            # print("Gt_conf", gt_conf.shape, gt_conf)
+            test_conf = test_conf.flatten()
+            # print("test_conf", test_conf.shape, test_conf)
             # heatmap = model.heatmaps
             # for i in range(21):
             #    seaborn.heatmap(heatmap[0, i, :, :].cpu().detach().numpy(), cmap="magma")
@@ -518,7 +523,8 @@ def main_test():
                     cv2.circle(img, (test_landmarks[idx][j], test_landmarks[idx][j + 1]), 2, (0, 0, 255), -1)
                     cv2.circle(img, (gt_landmarks[idx][j], gt_landmarks[idx][j + 1]), 1, (0, 255, 0), -1)
                 cv2.imshow('Check the keypoint and image' + str(idx), img)
-
+                print("Ground Truth confidence:", gt_conf[idx])
+                print("Test confidence:", test_conf[idx])
                 key = cv2.waitKey()
                 if key == 27:
                     exit(0)
