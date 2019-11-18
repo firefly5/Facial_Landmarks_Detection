@@ -82,6 +82,10 @@ def masked_average(losses, mask=None):
     if mask is not None:
         losses = losses * mask
         denom = mask.sum()
+        if losses.shape[0] != mask.shape[0]:
+            denom *= losses.shape[0]
+        elif losses.shape[1] != mask.shape[1]:
+            denom *= losses.shape[1]
     else:
         denom = losses.numel()
 
@@ -90,7 +94,8 @@ def masked_average(losses, mask=None):
         denom = max(denom, 1)
     else:
         denom = denom.clamp(1)
-    return losses.sum() / (denom * 21)
+
+    return losses.sum() / denom
 
 
 def euclidean_loss(actual, target, mask=None):
