@@ -70,8 +70,8 @@ def train(args, train_loader, valid_loader, model, criterion, optimizer, device,
             output_pts, output_conf = model(input_img)
 
             # observe loss
-            print('Output_pts:', output_pts, "Output_conf: ", output_conf)
-            print('Target_pts:', target_pts, 'Target_conf:', target_conf)
+            # print('Output_pts:', output_pts, "Output_conf: ", output_conf)
+            # print('Target_pts:', target_pts, 'Target_conf:', target_conf)
 
             # MSE in original image size
             # print(output_pts[0].shape)
@@ -100,6 +100,7 @@ def train(args, train_loader, valid_loader, model, criterion, optimizer, device,
                          (target_conf == 0).sum().item())
                         )
 
+            train_loss *= 25
             train_total_loss = train_loss + train_cls_loss
             train_losses.append(train_total_loss.item())
             # do BP automatically
@@ -114,6 +115,7 @@ def train(args, train_loader, valid_loader, model, criterion, optimizer, device,
                                                                                     train_total_loss.item()
                                                                                     )
                       )
+        print(optimizer.param_groups[0]['lr'])
         if scheduler:
             print(scheduler.get_lr())
             scheduler.step()
@@ -145,8 +147,8 @@ def train(args, train_loader, valid_loader, model, criterion, optimizer, device,
                 output_pts, output_conf = model(input_img)
 
                 # get loss
-                print('Output_pts:', output_pts, "Output_conf: ", output_conf)
-                print('Target_pts:', target_pts, 'Target_conf:', target_conf)
+                # print('Output_pts:', output_pts, "Output_conf: ", output_conf)
+                # print('Target_pts:', target_pts, 'Target_conf:', target_conf)
 
                 # MSE in original image size
                 mse_loss_valid_oi = pts_criterion((output_pts[0] + 63 / 64) * 64 * 64 / 63
@@ -177,6 +179,7 @@ def train(args, train_loader, valid_loader, model, criterion, optimizer, device,
                              (target_conf == 0).sum().item())
                             )
 
+                valid_loss *= 25
                 valid_total_loss = valid_loss + valid_cls_loss
                 valid_losses.append(valid_total_loss.item())
 
@@ -259,6 +262,7 @@ def test(test_loader, model, criterion, device):
                          (target_conf == 0).sum().item())
                         )
 
+            test_loss *= 25
             test_total_loss = test_loss + test_cls_loss
             test_losses.append(test_total_loss.item())
 
@@ -282,7 +286,7 @@ def main_test():
     ##################################################
     parser = argparse.ArgumentParser(description='Train Facial Landmarks Detector via DSNT')
     # train test data size set
-    parser.add_argument('--epochs', type=int, default=1, metavar='N',
+    parser.add_argument('--epochs', type=int, default=100, metavar='N',
                         help='number of epochs to train (default: 120)')
     parser.add_argument('--batch-size', type=int, default=32, metavar='N',
                         help='input batch size for training (default: 32)')
@@ -468,7 +472,7 @@ def main_test():
         print('====================================================')
     elif args.phase == 'Test' or args.phase == 'test':
         print('===> Test')
-        model_para_path = 'trained_models/detector_epoch_0.pt'
+        model_para_path = 'trained_models/detector_epoch_61.pt'
         model.load_state_dict(torch.load(model_para_path))
         test_losses = test(test_loader, model, criterion_pts, device)
         test_losses_ = pd.DataFrame(columns=['test loss'], data=test_losses)
@@ -476,7 +480,7 @@ def main_test():
         test_losses_.to_csv('test_loss.csv')
     elif args.phase == 'Finetune' or args.phase == 'finetune':
         print('===> Finetune')
-        pretrain_para_path = 'trained_models/first_train_with_SGD_lr0.00005_with_flip_similarity/detector_epoch_99.pt'
+        pretrain_para_path = 'trained_models/HGs1_Adam_bs32_lambda5_sigma1_addClassification/detector_epoch_61_LJL.pt'
         model.load_state_dict(torch.load(pretrain_para_path))
         train_losses, valid_losses = train(args, train_loader, valid_loader, model, criterion_pts, optimizer, device)
         train_losses_ = pd.DataFrame(columns=['train loss'], data=train_losses)
@@ -488,7 +492,7 @@ def main_test():
     elif args.phase == 'Predict' or args.phase == 'predict':
         print('===> Predict')
         # how to do predict?
-        model_para_path = 'trained_models/detector_epoch_0.pt'
+        model_para_path = 'trained_models/detector_epoch_61.pt'
         model.load_state_dict(torch.load(model_para_path))
 
         for test_batch_idx, batch in enumerate(test_loader):
@@ -518,13 +522,13 @@ def main_test():
                 img = test_img[idx].copy()
                 img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
                 for j in range(0, test_landmarks.shape[1], 2):
-                    print("Ground Truth: ", (gt_landmarks[idx][j], gt_landmarks[idx][j + 1]))
-                    print("Predict point: ", (test_landmarks[idx][j], test_landmarks[idx][j + 1]))
+                    # print("Ground Truth: ", (gt_landmarks[idx][j], gt_landmarks[idx][j + 1]))
+                    # print("Predict point: ", (test_landmarks[idx][j], test_landmarks[idx][j + 1]))
                     cv2.circle(img, (test_landmarks[idx][j], test_landmarks[idx][j + 1]), 2, (0, 0, 255), -1)
                     cv2.circle(img, (gt_landmarks[idx][j], gt_landmarks[idx][j + 1]), 1, (0, 255, 0), -1)
                 cv2.imshow('Check the keypoint and image' + str(idx), img)
-                print("Ground Truth confidence:", gt_conf[idx])
-                print("Test confidence:", test_conf[idx])
+                print("Ground Truth confidence:", gt_conf[idx].item())
+                print("Test confidence:", test_conf[idx].item())
                 key = cv2.waitKey()
                 if key == 27:
                     exit(0)
